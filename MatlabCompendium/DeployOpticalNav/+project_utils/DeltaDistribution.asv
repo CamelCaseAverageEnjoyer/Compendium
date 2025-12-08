@@ -1,0 +1,27 @@
+function D = DeltaDistribution(t,i,dr,dv,v0,camr,w)
+%DELTADISTRIBUTION Summary of this function goes here
+%   Detailed explanation goes here
+arguments (Input)
+    t  % time of flight
+    i  % number of deputy
+    dr
+    dv
+    v0
+    camr  % pos of camera in any t (ORF)
+    w  % ang vel of ORF rel to IRF
+end
+
+N = 10;
+D = zeros(N,N);
+phi = 0:(2*pi/(N-1)):(2*pi);
+theta = (-pi):(2*pi/(N-1)):(pi);
+for iPhi=1:N
+    for iTheta=1:N
+        e = [cos(theta)*cos(phi);
+             cos(theta)*sin(phi);
+             sin(theta)];
+        r = 0.15*e;  % pos of 1st deputy (ORF)
+        D()
+    end
+end
+end

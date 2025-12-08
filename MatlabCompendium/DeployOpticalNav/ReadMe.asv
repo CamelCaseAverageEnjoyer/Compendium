@@ -1,0 +1,87 @@
+Проект для препринта-1 *"Оптическая навигация роя сверхмалых космических аппаратов при отделении".*
+> Отображение КА с метками и без. Навигация по меткам/граням КА.
+
+```
++graphics/
+├── get_cube.m              возвращает точки куба
+└── show_aruco.m            отрисовывает метку из чёрных и белых квадратов
++utils/
+├── dynamics.m              класс движения ХКУ + угловое 
+├── q2dcm.m                 матрица поворота из кватерниона
+├── qdot.m                  кватернионное умножение
+└── spacecraft.m            класс КА
+local/
+├── camcal
+|   └── ...                 картинки смоделированной шахматной доски для расчёта cameraParams
+├── camcalcheck
+|   └── ...                 картинки Aruco-метки для проверки cameraParams
+├── modeling
+|   └── ...                 картинки движения без меток
+├── animation_1_lines.gif
+├── animation_2_lineparams.gif
+├── animation_3_model.gif
+├── animation_chipsat.gif
+├── cameraPrams.mat         cameraParams
+├── starlink_deployment_1.mp4         
+
+
+
+
+├── +graphics
+|   ├── circle.m              рисует круг (для main0)
+|   ├── myplot.m              рисует (x,y) по матрице N×2
+|   ├── myplot3.m             рисует (x,y,z) по матрице N×3
+|   ├── myscatter.m           рисует (x,y) по матрице N×2
+|   ├── myscatter3.m          рисует (x,y,z) по матрице N×3
+|   └── undistort.m           корректирует картинку
+├── +utils
+|   ├── Camera.m              класс параметров камеры
+|   ├── diff_evolve.m         дифференциальная эволюция
+|   ├── eiler2mat.m           матрица из углов Эйлера  (из Википедии)
+|   ├── krilov2mat.m          матрица из углов Крылова (из файла Алгоритм.doc)
+|   ├── line_least_squares.m  поиск коэфф-в линии по точкам
+|   ├── mlm2orb.m             переход МЛМ -> РС -> ССК -> ОСК
+|   ├── my_atm.m              очень кривой рассчёт плотности атмосферы (заменить)
+|   ├── myget.m               распаковка калибровочных параметров
+|   ├── residual.m            функция ошибки (по 2D точкам И/ИЛИ по линиям)
+|   └── residual3.m           функция ошибки (между 3D траекториями)
+├── local
+|   ├── 1cam-sample.jpg               примеры кадров с камер
+|   ├── 2cam-sample.jpg
+|   ├── 3cam-sample.jpg
+|   ├── boxes_1_(1).csv               траектории (модель YOLO8n) 
+|   ├── boxes_1_(2).csv
+|   ├── boxes_1_(3).csv
+|   ├── boxes_2_(1).csv
+|   ├── boxes_2_(2).csv
+|   ├── boxes_2_(3).csv
+|   ├── boxes_notrack_1_(1).csv       траектории (модель YOLO11n) 
+|   ├── boxes_notrack_1_(2).csv
+|   ├── boxes_notrack_1_(3).csv
+|   ├── boxes_notrack_2_(1).csv
+|   ├── boxes_notrack_2_(2).csv
+|   ├── boxes_notrack_2_(3).csv
+|   ├── calibration-1.mat             параметры камеры (cam) после main1
+|   ├── calibration-2.mat             параметры камеры (cam) после main2 / main12
+|   ├── calibration-3.mat             параметры камеры (cam) после main3
+|   ├── cam1-lines.mat                линии на кадрах, которые "надо выпрямить" в main1 / main12
+|   ├── cam2-lines.mat        
+|   ├── cam3-lines.mat        
+|   ├── pre-calibration.mat           фокусные расстояния (F) после main0
+|   ├── test_line_calibr.mat          куча точек (f) для test_line_calibration
+|   ├── trajectories-2D.mat           траектории (T) ШТ после main0 
+|   ├── trajectories-3D.mat           траектории (T) ШТ после main3
+|   ├── trajectories-3D-approxed.mat  траектории-полиномы (P) ШТ после main4
+|   └── Орбита_МКС_UTC.txt
+├── config.m                  параметры моделирования
+├── main0.m                   чтение "boxes_...", 2D-траектории, оценка фокусов
+├── main1.m                   калиброка по линиям
+├── main2.m                   калиброка по точкам
+├── main12.m                  калиброка по линиям и точкам
+├── main3.m                   совмещение траекторий (+ калибровка?)
+├── main4.m                   построение полиномиальной 3D-траектории
+├── main5.m                   анализ движения ШТ в ОСК
+├── test_J2.m                 относительное грав. ускорение 
+├── test_line_calibration.m   решаемость калиброки по линиям
+└── test_show3Dpoints.m       3D-визуализация точек МЛМ
+```

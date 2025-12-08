@@ -2,7 +2,9 @@
 clear
 clc
 close all
-import utils.*
+import graphics.*
+import my_utils.*
+import project_utils.*
 load('local/cameraParams')
 
 window_size = [1280 720];
@@ -39,8 +41,7 @@ for t=0:0.1:2
     
     for x0 = 1.1:dh:4
         r_irf = [x0+v_x*t; 0; 0];
-        [x, y, z] = get_cube(dims, A, r_irf);        
-        patch(x,y,z,0.5);
+        show_cube(dims, A, r_irf);
     end
     hold off
     % pause(0.1)

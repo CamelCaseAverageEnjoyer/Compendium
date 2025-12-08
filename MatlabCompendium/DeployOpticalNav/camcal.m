@@ -2,9 +2,12 @@
 clear
 clc
 close all
-import utils.*
+import graphics.*
+import my_utils.*
+import project_utils.*
 
 window_size = [1280 720];
+% window_size = [1920 1080];
 camera_angle = 90;
 
 %% Produce pictures
