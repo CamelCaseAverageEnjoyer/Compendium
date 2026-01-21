@@ -1,0 +1,45 @@
+%% 
+clear
+clc
+close all
+config  % const params loading
+import utils.*  % my functions loading
+
+% load("local/pre1-calibration.mat")  % cam{icam} - Camera class
+% load("local/post-calibration.mat")  % cam{icam} - Camera class
+% load("local/post2-calibration.mat")  % cam{icam} - Camera class
+
+load("local/trajectories-3D")  % T - trajectories
+
+fig = figure('Position', [50 50 700 700]);
+tb = cameratoolbar(fig);
+
+%% Points visualize
+hold on
+for icam = 1:3
+    for i = 1:size(cam{icam}.points,1)
+        if cam{icam}.points.name{i}(1) == 'r', c = 'r'; end
+        if cam{icam}.points.name{i}(1) == 'l', c = 'k'; end
+        if cam{icam}.points.name{i}(1) == 't', c = 'g'; end
+        if cam{icam}.points.name{i}(1) == 'b', c = 'b'; end
+        scatter3(cam{icam}.points.pos(i,1), cam{icam}.points.pos(i,2), cam{icam}.points.pos(i,3), c)
+        text(cam{icam}.points.pos(i,1) + 0.1, cam{icam}.points.pos(i,2), cam{icam}.points.pos(i,3), cam{icam}.points.name{i})
+    end
+    sparrow = [cam{icam}.pos cam{icam}.cam2mlm([0;0;1],[],[])];
+    plot3(sparrow(1,:), sparrow(2,:), sparrow(3,:), 'g')
+    scatter3(cam{icam}.pos(1), cam{icam}.pos(2), cam{icam}.pos(3), 'k+')
+    text(cam{icam}.pos(1) + 0.1, cam{icam}.pos(2), cam{icam}.pos(3), "cam-"+int2str(icam))
+
+%     for iexp = 1:2
+%         plot3(T{iexp,icam}.R_mlm(:,1), ...
+%               T{iexp,icam}.R_mlm(:,2), ...
+%               T{iexp,icam}.R_mlm(:,3))
+%     end
+end
+hold off
+xlabel('x, м')
+ylabel('y, м')
+zlabel('z, м')
+cameratoolbar("SetCoordSys", "y")
+axis equal
+grid on

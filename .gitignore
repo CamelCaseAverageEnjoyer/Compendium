@@ -1,11 +1,15 @@
 MatlabCompendium/DeployOpticalNav/local
-MatlabCompendium/YoloOpticalNav/MatlabPostProcessing/local
-MatlabCompendium/YoloOpticalNav/PythonPreProcessing/local
+MatlabCompendium/YoloOpticalNav25/MatlabPostProcessing/local
+MatlabCompendium/YoloOpticalNav25/PythonPreProcessing/local
+MatlabCompendium/YoloOpticalNav26/MatlabPostProcessing/local
+MatlabCompendium/YoloOpticalNav26/PythonPreProcessing/local
+MatlabCompendium/YoloOpticalNav26/PythonPreProcessing/.ipynb_checkpoints
 
 PythonCompendium/.ipynb_checkpoints
 PythonCompendium/local
 PythonCompendium/MyCarEngine/local
 PythonCompendium/MyVedo/local
+PythonCompendium/__pycache__
 
 RnD-master/local
 

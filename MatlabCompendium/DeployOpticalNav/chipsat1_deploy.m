@@ -3,163 +3,138 @@ clear
 clc
 close all
 import graphics.*
-import my_utils.*
 import project_utils.*
 config
 load('local/cameraParams')
 
+% Case choice
+dt = 0.1;
+dt_cam = 0.2;
+t_modeling = 200;
+
+case_n = 1;
+n_deputy = 10;
+e = M_orf2brf'*e_deploy;
+
+if case_n == 1
+    r_deploy = [0:dr:dr*(n_deputy-1);0:dr:dr*(n_deputy-1);0:dr:dr*(n_deputy-1)] .*e + [chief_dims(1)/2;0;0];     % m
+    v_deploy = [0:dv:dv*(n_deputy-1);0:dv:dv*(n_deputy-1);0:dv:dv*(n_deputy-1)].*e + v0 * e;                  % m/s
+    t_deploy = zeros(1, n_deputy);                               % s
+    arrow_rate = 0.3;  % for plot
+elseif case_n == 2
+    r_deploy = ones(3, n_deputy) * chief_dims(1)/2 .* e;         % m
+    v_deploy = ones(1, n_deputy) * v0 .* e;                      % m/s
+    t_deploy = (0:(n_deputy-1)) * dr/v0;                         % s
+    arrow_rate = 0.15*1.3;  % for plot
+else
+    M = [0 -1  0; 
+         1  0  0; 
+         0  0  1];
+    M_orf2brf = M * M_orf2brf;
+    M_orf2dep = M * M_orf2dep;
+    M_orf2cam = M_brf2cam * M_orf2brf;
+    r_camera = r_camera - [0.15;0;0];
+
+    e_deploy = [0; 1; 0];
+    r_deploy = [0:dr:dr*(n_deputy-1);zeros(1,n_deputy);zeros(1,n_deputy)] + chief_dims(1)/3 * e_spread;  % m
+    v_deploy = ones(3, n_deputy) .* (M_orf2brf'*e_deploy) * v0;  % m/s
+    t_deploy = zeros(1, n_deputy);                               % s
+    arrow_rate = 0.2;  % for plot
+end
+
+
 % Dynamic system
-dt = 0.5;
-t_modeling = 500;
 d = dynamics(h_orb, dt);  % Class of dynamics
 
 % Chief spacecraft vectors
-w_irf2orf = [0; d.w_orb; 0];      % IRF->ORF in ORF
-w_irf2brf = M_orf2brf*w_irf2orf;  % IRF->BRF in BRF (BRF don't rotate in ORF)
-chief = spacecraft(zeros(3,1),zeros(3,1),q_irf2brf,w_irf2brf,3,chief_dims);
+chief = spacecraft(zeros(3,1),zeros(3,1),chief_dims);
 
 % Deputy pacecrafts
-n_deputy = 10;
-r_deploy = (0:dr:dr*(n_deputy-1)) + chief_dims(1)/2;  % in m
-v_deploy = (0:dv:dv*(n_deputy-1)) + v0;  % in m/s
 spacecrafts = chief;
 for j = 1:n_deputy
-    M = chief.ORF2BRF(d);
-    r = chief.r + M' * e_deploy * r_deploy(j);
-    v = chief.v + M' * e_deploy * v_deploy(j);
-    q = q_irf2deputy;
-    w = chief.w;
-    spacecrafts = [spacecrafts spacecraft(r, v, q, w, 0.01, deputy_dims)];
+    r = chief.r + M_orf2brf' * r_deploy(:,j);
+    v = chief.v + M_orf2brf' * v_deploy(:,j);
+    spacecrafts = [spacecrafts spacecraft(r, v, deputy_dims)];
     disp('Отделение: r=['+string(r(1))+','+string(r(2))+','+string(r(3))+']м, v=['+string(v(1))+','+string(v(2))+','+string(v(3))+']м/с')
 end
 
-% Testing
-disp('Тестировка: '+string(norm(spacecrafts(1).ORF2BRF(d) - M_orf2brf) < 1e-14))
-
 % Plan of trajectory
-figure; hold on
+figure('Position', [100 100 600 400]); hold on
 axis equal
-xlabel('x, m')
-ylabel('y, m')
-zlabel('z, m')
-xlim([-1.5, 1.5])
-ylim([-1.0, 1.0])
-zlim([-0.5, 0.5])
+xlabel('x, м');    ylabel('y, м');    zlabel('z, м')
+xlim([-0.15, 0.65]); ylim([-0.2, 0.2]); zlim([-0.2, 0.2])
 colormap('gray')
-% Camera show
-arrow_rate = 0.3;
-point_rate = 0.4;
-M_orf2cam = M_brf2cam * M_orf2brf;
+% Arrows show
 rc = spacecrafts(1).r + M_orf2brf'*r_camera;
-r = rc + M_orf2brf'*r_cam_dir*arrow_rate;   arrow3(rc', r', 'r',point_rate);
-text(r(1), r(2), r(3), "Camera toward")
-% r = Mz(camera_angle/2*pi/180)*M_orf2brf'*r_cam_dir; myplot3([rc, rc+r*arrow_rate]);
-% r = Mz(-camera_angle/2*pi/180)*M_orf2brf'*r_cam_dir; myplot3([rc, rc+r*arrow_rate]);
-r = rc + M_orf2brf'*r_cam_up*arrow_rate;    arrow3(rc', r', 'r',point_rate);
-text(r(1), r(2), r(3), "Camera up")
-%r = rc + M_orf2brf'*r_cam_aside*arrow_rate; arrow3(rc', r', 'r',point_rate);
-%text(r(1), r(2), r(3), "Camera side")
-% Other show
-r = spacecrafts(2).r + M_orf2brf'*e_deploy*0.5; arrow3(spacecrafts(2).r', r', 'b',point_rate);
-text(r(1), r(2), r(3), "Deploy direction")
+
+r = rc + M_orf2brf'*e_cam_dir*arrow_rate; arrow3(rc', r', 'r',0.7); text(r(1), r(2), r(3), "Направление намеры")
+r = Mz(camera_angle/2*pi/180)*M_orf2brf'*e_cam_dir; myplot3([rc, rc+r*arrow_rate]);
+r = Mz(-camera_angle/2*pi/180)*M_orf2brf'*e_cam_dir; myplot3([rc, rc+r*arrow_rate]);
+
+% r = rc + M_orf2brf'*e_cam_up*arrow_rate;    arrow3(rc', r', 'r',0.4); text(r(1), r(2), r(3), "Camera up")
+% r = rc + M_orf2brf'*e_cam_aside*arrow_rate; arrow3(rc', r', 'r',0.4); text(r(1), r(2), r(3), "Camera side")
+
+r = spacecrafts(2).r + M_orf2brf'*e_deploy*arrow_rate; arrow3(spacecrafts(2).r', r', 'b',0.7); text(r(1), r(2), r(3), "Направление отделения")
+
 % Trajectory show
 N = round(1 * t_modeling / dt);
 t = dt:dt:t_modeling;
 R = zeros(3,N+1); V = zeros(3,N+1);
-LOS_in_pic = zeros(3, n_deputy, N); % Line of sight the deputy perp. to r_cam_dir 
 LOS_3d     = zeros(3, n_deputy, N); % Line of sight
 for j=1:n_deputy
-    R(:,1) = chief.r + M_orf2brf' * r_deploy(j) * e_deploy;
-    V(:,1) = chief.v + M_orf2brf' * v_deploy(j) * e_deploy;
+    R(:,1) = chief.r + M_orf2brf' * r_deploy(:,j);
+    V(:,1) = chief.v + M_orf2brf' * v_deploy(:,j);
     for i=1:N
-        [dr_, dv_, ~, ~] = d.rhs(R(:,i), V(:,i), zeros(4,1), zeros(3,1));
-        V(:,i+1) = V(:,i) + dv_*dt;
-        R(:,i+1) = R(:,i) + dr_*dt;
-        if i==round(t_modeling / dt) % Как камера смотрит на середины чипсатов
-            myplot3([rc R(:,i+1)], 'k')
+        if i*dt < t_deploy(j)
+            V(:,i+1) = V(:,i);  R(:,i+1) = R(:,i);
+        else
+            [dr_, dv_] = d.rhs(R(:,i), V(:,i));
+            V(:,i+1) = V(:,i) + dv_*dt;  
+            R(:,i+1) = R(:,i) + dr_*dt;
         end
-        LOS = R(:,i+1) - rc;
-        % LOS_in_pic(:,j,i) = LOS - (M_orf2brf'*e_deploy) * dot(M_orf2brf'*e_deploy, LOS);
-        LOS_in_pic(:,j,i) = LOS - (M_orf2cam'*r_cam_dir) * dot(M_orf2cam'*r_cam_dir, LOS);
-        LOS_3d(:,j,i) = LOS;
+        % if i==round(t_modeling / dt) % Как камера смотрит на середины чипсатов
+        %     myplot3([rc R(:,i+1)], 'k')
+        % end
+        LOS_3d(:,j,i) = R(:,i+1) - rc;
     end
+    spacecrafts(j+1).r = R(:,N+1);  % Костыль для отображения на графике
     myplot3(R, 'b')
 end
 % Patch show
-chief.show_chief(d)
-show_cube([0.02;0.02;0.05], M_orf2cam', rc - M_orf2brf'*r_cam_dir*0.025)
+chief.show_chief()
+for j=1:n_deputy
+    spacecrafts(j+1).show_deputy(j)
+    spacecrafts(j+1).r = chief.r + M_orf2brf' * r_deploy(:,j);  % Костыль убирается для численного моделирования
+end
+show_cube([0.02;0.02;0.05], M_orf2cam', rc - M_orf2brf'*e_cam_dir*0.025)
 camup([0 1 0])
 hold off
 
-% Это то, как считается в статье. А на саааааааамом то деле всё по-другому
 % Visioned part of deputy in t=t_modeling
 deltas = zeros(n_deputy-1, N);
-deltas2 = zeros(n_deputy-1, N);
 for j=1:(n_deputy-1)
     for i=1:N
-        deltas(j,i) = norm(LOS_in_pic(:,j+1,i)-LOS_in_pic(:,j,i)) / spacecrafts(2).dims(1)*100;
         R1 = norm(LOS_3d(:,j+1,i));
         R2 = norm(LOS_3d(:,j,i));
         cos_a = dot(LOS_3d(:,j+1,i), LOS_3d(:,j,i)) / R1 / R2;
-        a = acos(cos_a);
-        % deltas2(j,i) = R1 * sqrt(1 - cos_a^2);
-        deltas2(j,i) = R1 * sin(a)  / spacecrafts(2).dims(1)*100;
-    end
-end
-% disp('Видимая часть чипсата: '+string(deltas1(1))+' м ('+string(deltas1(1)/spacecrafts(2).dims(1)*100)+' %)')
-figure()
-hold on
-l = [];
-legend()
-for j=1:(n_deputy-1)
-    % plot(t, deltas(j,:), 'b')
-    plot(t, deltas2(j,:),'DisplayName','ДКА '+string(j+1))
-end
-xlabel('t, c')
-ylabel('Видимая часть чипсата, %')
-hold off
-
-% Отображение лучших направлений запусков
-tick_rate = 6;
-figure()
-[azimuth,elevation,r] = cart2sph(ex(1),ex(2),ex(3));
-disp('Current phi='+string(elevation)+', theta='+string(azimuth))
-phi = 0:(2*pi/N):(2*pi);
-theta = (-pi):(2*pi/N):(pi);
-
-counter = 0;
-i_list = [2,n_deputy];
-t_list = [10,50,100];
-D = {};
-for i=i_list
-    for t=t_list
-        counter = counter + 1;
-        D{counter} = DeltaDistribution(t,i,dr,dv,v0,d.w_orb,r_camera) / deputy_dims(1) * 100;
-        m = min(D{counter}(:)); M = max(D{counter}(:)); [i1,i2]=find(D{counter}==M);
-        for j=1:1  % length(i1)
-            disp('Max '+string(M)+'in phi='+string(phi(i1(j)))+', theta='+string(theta(i2(j))))
-        end
-        if counter == 1
-            m_ = m; M_ = M;
+        cos_phi = dot(LOS_3d(:,j+1,i), M_orf2brf' * e_spread) / R1;
+        if cos_phi > 0
+            deltas(j,i) = R1/cos_phi * sqrt(1 - cos_a^2) / spacecrafts(2).dims(1)*100;
         else
-            m_ = min(m,m_); M_ = max(M,M_);
+            deltas(j,i) = 0;
         end
     end
 end
-counter = 0;
-for i=i_list
-    for t=t_list
-        counter = counter + 1;
-        subplot(length(i_list),length(t_list),counter)
-        h = heatmap(D{counter});
-        h.XDisplayLabels = repmat({''}, 1, size(D{counter}, 2));
-        h.YDisplayLabels = repmat({''}, 1, size(D{counter}, 1));
-        title('Видимая часть ДКА '+string(i)+' (t='+string(t)+'), %')
-        xlabel('phi')
-        ylabel('theta')
-        clim([m_, M_]);
-    end
+% axes('Position',[.22 .55 .3 .3]); box on; hold on
+figure('Position', [700 100 300 200]); hold on
+m = 0;
+for j=1:(n_deputy-1)
+    plot(t, deltas(j,:),'b')
+    m = max(m, max(deltas(j,:)));
 end
+ylim([0, min(100, m)])
+xlabel('t, c'); ylabel('Видимая часть ДКА, %')
+hold off
 
 
 %% Run of modeling
@@ -171,78 +146,55 @@ counter_gif_frames = 0;
 N = round(t_modeling / dt);
 CameraPosORF = zeros(N, 3);
 ChiefPosORF = zeros(N, 3);
-ChiefQuatIRF = zeros(N, 4);
 DeputyPosORF = zeros(N, 3 * n_deputy);
-DeputyQuatIRF = zeros(N, 4 * n_deputy);
-modeling_report = table(CameraPosORF, ChiefPosORF, ChiefQuatIRF, ...
-                        DeputyPosORF, DeputyQuatIRF);
+modeling_report = table(CameraPosORF, ChiefPosORF, DeputyPosORF);
 
+counter = 0;
 for i = 1:N
     % Time step
-    [d, spacecrafts] = d.time_step(spacecrafts);
+    [d, spacecrafts] = d.time_step(spacecrafts, t_deploy);
 
     % SHAMANIZM
     spacecrafts(1).r = zeros(3,1); 
     spacecrafts(1).v = zeros(3,1);
-    spacecrafts(1).w = zeros(3,1);
-    q_irf2orf = [cos(-d.w_orb*d.t/2), 0, 0, sin(-d.w_orb*d.t/2)];
-    spacecrafts(1).q = qdot(q0, q_irf2orf);
     
     % Figure update
-    clf;
-    colormap('gray');
-    camproj('perspective');
-    axis equal;
-    cameratoolbar("SetMode","pan");  % pan
-    light('Style', 'infinite', 'Position', d.R_sun);
+    clf
+    colormap('gray')
+    camproj('perspective')
+    axis equal
+    cameratoolbar("SetMode","pan")
+    light('Style', 'infinite', 'Position', d.R_sun)
     gca.XAxis.Visible = 'off';
     gca.YAxis.Visible = 'off';
     gca.ZAxis.Visible = 'off';
-    axis off ;
-    hold on;
+    axis off
+    hold on
     
     % Spacecrafts show
-    spacecrafts(1).show_chief(d);
+    spacecrafts(1).show_chief();
     for j = 2:length(spacecrafts)
-        spacecrafts(j).show_deputy(j-1, d, markerSize);
+        spacecrafts(j).show_deputy(j-1);
     end
     
     % Camera update
-    M_orf2brf = spacecrafts(1).ORF2BRF(d);
     M_orf2cam = M_brf2cam * M_orf2brf;
     cam_pos = spacecrafts(1).r + M_orf2brf' * r_camera;
     campos(cam_pos);
-    camup(M_orf2cam' * r_cam_up);
-    camtarget(cam_pos + M_orf2cam' * r_cam_dir);
+    camup(M_orf2brf' * e_cam_up);
+    camtarget(cam_pos + M_orf2brf' * e_cam_dir);
     camva(camera_angle);
     hold off;
-
-    % Find Aruco
-    % try
-    %     saveas(f, 'local/tmp.jpg');
-    %     I = imread('local/tmp.jpg');
-    %     delete local/tmp.jpg
-    %     [ids,locs,poses] = readArucoMarker(I,markerFamily,cameraParams.Intrinsics,markerSize(1));
-    %     for ii=1:length(ids)
-    %         disp('i='+string(i)+' | Метка id='+string(ids(ii)) + ', r=['+string(poses(ii).Translation(1))+',' ...
-    %                                                                     +string(poses(ii).Translation(2))+',' ...
-    %                                                                     +string(poses(ii).Translation(3))+'] м')
-    %     end
-    % catch 
-    %      % disp('i='+string(i)+' | Меток не обнаружено!')
-    % end
 
     % Docking
     modeling_report.CameraPosORF(i,:) = cam_pos';
     modeling_report.ChiefPosORF(i,:) = spacecrafts(1).r';
-    modeling_report.ChiefQuatIRF(i,:) = spacecrafts(1).q';
     for j=1:n_deputy
         modeling_report.DeputyPosORF(i,3*j-2:3*j) = spacecrafts(j+1).r';
-        modeling_report.DeputyQuatIRF(i,4*j-3:4*j) = spacecrafts(j+1).q';
     end
 
-    % Animation
-    if mod(i, 100) == 0
+    % Animation + pic saving
+    if mod(i - 1, 2) == 0
         frame = getframe(gcf);
         img =  frame2im(frame);
         [img,cmap] = rgb2ind(img,256);
@@ -251,20 +203,149 @@ for i = 1:N
         else
             imwrite(img,cmap,'local/animation_chipsat.gif','gif','WriteMode','append','DelayTime',0.001);
         end        
+        counter = counter + 1;
+        saveas(f, 'local/modeling_chipsat/' + string(counter) + '.jpg');
     end
 end
+save("local/modeling_report", 'modeling_report')
 
 %% Plot the results
 figure
 hold on
-spacecrafts(1).show_chief(d);
-plot3(modeling_report.ChiefPosORF(:,1), modeling_report.ChiefPosORF(:,2), modeling_report.ChiefPosORF(:,3), 'k');
+spacecrafts(1).show_chief();
+myplot3(modeling_report.ChiefPosORF', 'k');
 for j = 1:n_deputy
-    plot3(modeling_report.DeputyPosORF(:,3*j-2), modeling_report.DeputyPosORF(:,3*j-1), modeling_report.DeputyPosORF(:,3*j), 'b');
+    myplot3(modeling_report.DeputyPosORF(:,3*j-2:3*j)', 'b');
 end
-xlabel('x, m')
-ylabel('y, m')
-zlabel('z, m')
-colormap('gray');
-axis equal;
+xlabel('x, м'); ylabel('y, м'); zlabel('z, м')
+camup([0 1 0])
+colormap('gray')
+axis equal
 hold off
+
+%% Find aruco
+config  % markerFamily, markerSize
+load('local/cameraParams')
+counter = 0;
+docking = {};
+for i = 1:1000  % Сколько картинок обработать
+    I = imread('local/modeling_chipsat/' + string(i) + '.jpg');
+    camIntrinsics = cameraParams.Intrinsics;
+    try
+        [ids,locs,poses] = readArucoMarker(I,markerFamily,camIntrinsics,markerSize(1));
+        for ii=1:length(ids)
+            r = poses(ii).Translation;
+            % disp('i='+string(i)+' | Метка id='+string(ids(ii)) ...
+            %     +', r=['+string(r(1))+','+string(r(2))+','+string(r(3))+'] м')
+            counter = counter + 1;
+            docking{counter}.id = ids(ii);
+            docking{counter}.r = r';
+            docking{counter}.i = round(dt_cam / dt)*i;
+        end
+    catch
+        % disp('i='+string(i)+' | Меток не обнаружено!')
+    end
+end
+
+%% Post 
+import graphics.myplot3
+load("local/modeling_report")
+config
+
+figure('Position', [100 100 400 250]);
+hold on
+r = zeros(3, N, n_deputy);
+rs = {};
+ts = {};
+for j=n_deputy:-1:1
+    t = [];
+    r = [];
+    reals = [];
+    r_est = [];
+    counter = 0;
+    for k = 1:length(docking)
+        if j == docking{k}.id
+            counter = counter + 1;
+            r(:, counter) = M_orf2brf' * (M_brf2cam' * docking{k}.r + r_camera - M_brf2dep' * marker_pos);
+
+            i = docking{k}.i;
+            r_real = modeling_report.DeputyPosORF(i,3*j-2:3*j)';
+            reals(:, counter) =  r_real;
+            r_est(:, counter) =  r(:, counter);
+            r(:, counter) = r(:, counter) - r_real;
+            t(counter) = i*dt;
+        end
+    end
+    % plot(t,r(1,:) / markerSize(1)); plot(t,r(2,:) / markerSize(1)); plot(t,r(3,:) / markerSize(1));
+    if size(r, 2) > 0
+        plot(t,r(1,:)); plot(t,r(2,:)); plot(t,r(3,:));
+        endpoint = size(t, 2)-10;
+        if endpoint > 10
+            ts{j} = t(10:endpoint);
+            rs{j} = r_est(:,10:endpoint);
+            rr{j} = reals(:,10:endpoint);
+        end
+    end
+end
+hold off
+% camup([1 0 0])
+% axis equal
+% legend('x', 'y', 'z')
+xlabel('Время, c'); ylabel('Ошибка навигации, м')
+
+%%
+import graphics.*
+new_window_size = [300 300];
+t_modeling = 10000;
+dt = 1;
+h_orb = 400e3;
+d = dynamics(h_orb, dt);
+N = round(1 * t_modeling / dt);
+
+figure('Position', [100 100 new_window_size]); hold on
+xlabel('x, м');    ylabel('y, м');    zlabel('z, м')
+
+for j = 1:10
+    all_counter = size(ts{j},2);
+    ft = fittype('a*x + b');
+    [paramx,~] = fit(ts{j}',rs{j}(1,:)',ft);
+    [paramy,~] = fit(ts{j}',rs{j}(2,:)',ft);
+    [paramz,~] = fit(ts{j}',rs{j}(3,:)',ft);
+    R_mnk = [paramx.a * ts{j} + paramx.b;
+             paramy.a * ts{j} + paramy.b;
+             paramz.a * ts{j} + paramz.b];
+    R_real = rr{j};
+    % figure('Position', [100 600 new_window_size]); hold on
+    % plot(R_real(1,:), 'r:'); plot(R_real(2,:), 'g:'); plot(R_real(3,:), 'b:'); 
+    % plot(R_mnk(1,:), 'r-');  plot(R_mnk(2,:), 'g-');  plot(R_mnk(3,:), 'b-'); 
+    % xlabel('Кадры'); ylabel('Координаты R, м')
+    % legend('Rˣ', 'Rʸ', 'Rᶻ', 'оценка Rˣ', 'оценка Rʸ', 'оценка Rᶻ')
+    % grid; hold off
+    
+    
+    R_r = zeros(3,N+1); V_r = zeros(3,N+1);
+    R_e = zeros(3,N+1); V_e = zeros(3,N+1);
+    R_r(:,1) = R_real(:,1); R_e(:,1) = R_mnk(:,1);
+    V_r(:,1) = (R_real(:,all_counter) - R_real(:,1))/3;
+    V_e(:,1) = (R_mnk(:,all_counter) - R_mnk(:,1))/3;
+    for i=1:N
+        [dr_, dv_] = d.rhs(R_r(:,i), V_r(:,i));
+        V_r(:,i+1) = V_r(:,i) + dv_*dt;  
+        R_r(:,i+1) = R_r(:,i) + dr_*dt;
+        [dr_, dv_] = d.rhs(R_e(:,i), V_e(:,i));
+        V_e(:,i+1) = V_e(:,i) + dv_*dt;  
+        R_e(:,i+1) = R_e(:,i) + dr_*dt;
+    end
+    
+    myplot3(R_r, 'b')
+    myplot3(R_e, 'r')
+    
+end
+legend('Действительные траектории', 'Оцениваемые траектории')
+grid; hold off;
+
+figure('Position', [100 400 new_window_size]); hold on
+myplot3(R_e-R_r, 'b')
+xlabel('x, м');    ylabel('y, м');    zlabel('z, м')
+legend('Ошибка траектории')
+grid; hold off;

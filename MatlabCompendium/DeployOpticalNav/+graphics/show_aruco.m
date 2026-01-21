@@ -14,10 +14,10 @@ function show_aruco(dims, A, r_irf, r_brf, marker)  % (r, r1, q, d)
     
     for i = 1:nx
         for j = 1:ny
-            x(:, ny*i+j) = [hx*i; hx*i+hx; hx*i+hx; hx*i];
-            y(:, ny*i+j) = [hy*j; hy*j; hy*j+hy; hy*j+hy];
-            z(:, ny*i+j) = [0; 0; 0; 0];
-            c(ny*i+j) = marker_clr(marker(i,j) + 1);
+            x(:, ny*(i-1)+j) = [hx*(i-1); hx*i; hx*i; hx*(i-1)];
+            y(:, ny*(i-1)+j) = [hy*(j-1); hy*(j-1); hy*j; hy*j];
+            z(:, ny*(i-1)+j) = [0; 0; 0; 0];
+            c(ny*(i-1)+j) = marker_clr(marker(i,j) + 1);
         end
     end
     x = x - 0.5;
