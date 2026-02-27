@@ -8,11 +8,10 @@ config
 load('local/cameraParams')
 
 % Case choice
-dt = 0.1;
-dt_cam = 0.2;
-t_modeling = 200;
+dt = 0.02;
+t_modeling = 20;
 
-case_n = 1;
+case_n = 2;
 n_deputy = 10;
 e = M_orf2brf'*e_deploy;
 
@@ -26,20 +25,6 @@ elseif case_n == 2
     v_deploy = ones(1, n_deputy) * v0 .* e;                      % m/s
     t_deploy = (0:(n_deputy-1)) * dr/v0;                         % s
     arrow_rate = 0.15*1.3;  % for plot
-else
-    M = [0 -1  0; 
-         1  0  0; 
-         0  0  1];
-    M_orf2brf = M * M_orf2brf;
-    M_orf2dep = M * M_orf2dep;
-    M_orf2cam = M_brf2cam * M_orf2brf;
-    r_camera = r_camera - [0.15;0;0];
-
-    e_deploy = [0; 1; 0];
-    r_deploy = [0:dr:dr*(n_deputy-1);zeros(1,n_deputy);zeros(1,n_deputy)] + chief_dims(1)/3 * e_spread;  % m
-    v_deploy = ones(3, n_deputy) .* (M_orf2brf'*e_deploy) * v0;  % m/s
-    t_deploy = zeros(1, n_deputy);                               % s
-    arrow_rate = 0.2;  % for plot
 end
 
 
@@ -67,14 +52,16 @@ colormap('gray')
 % Arrows show
 rc = spacecrafts(1).r + M_orf2brf'*r_camera;
 
-r = rc + M_orf2brf'*e_cam_dir*arrow_rate; arrow3(rc', r', 'r',0.7); text(r(1), r(2), r(3), "Направление намеры")
+r = rc + M_orf2brf'*e_cam_dir*arrow_rate; arrow3(rc', r', 'r',0.7); 
+text(r(1), r(2), r(3), "Направление камеры")
 r = Mz(camera_angle/2*pi/180)*M_orf2brf'*e_cam_dir; myplot3([rc, rc+r*arrow_rate]);
 r = Mz(-camera_angle/2*pi/180)*M_orf2brf'*e_cam_dir; myplot3([rc, rc+r*arrow_rate]);
 
 % r = rc + M_orf2brf'*e_cam_up*arrow_rate;    arrow3(rc', r', 'r',0.4); text(r(1), r(2), r(3), "Camera up")
 % r = rc + M_orf2brf'*e_cam_aside*arrow_rate; arrow3(rc', r', 'r',0.4); text(r(1), r(2), r(3), "Camera side")
 
-r = spacecrafts(2).r + M_orf2brf'*e_deploy*arrow_rate; arrow3(spacecrafts(2).r', r', 'b',0.7); text(r(1), r(2), r(3), "Направление отделения")
+%r = spacecrafts(2).r + M_orf2brf'*e_deploy*arrow_rate; 
+%arrow3(spacecrafts(2).r', r', 'b',0.7, 'LineWidth', 2); text(r(1), r(2), r(3), "Направление отделения")
 
 % Trajectory show
 N = round(1 * t_modeling / dt);
@@ -133,7 +120,7 @@ for j=1:(n_deputy-1)
     m = max(m, max(deltas(j,:)));
 end
 ylim([0, min(100, m)])
-xlabel('t, c'); ylabel('Видимая часть ДКА, %')
+xlabel('Время, c'); ylabel('Видимая часть ДКА, %')
 hold off
 
 
@@ -194,18 +181,16 @@ for i = 1:N
     end
 
     % Animation + pic saving
-    if mod(i - 1, 2) == 0
-        frame = getframe(gcf);
-        img =  frame2im(frame);
-        [img,cmap] = rgb2ind(img,256);
-        if i == 1
-            imwrite(img,cmap,'local/animation_chipsat.gif','gif','LoopCount',Inf,'DelayTime',0.001);
-        else
-            imwrite(img,cmap,'local/animation_chipsat.gif','gif','WriteMode','append','DelayTime',0.001);
-        end        
-        counter = counter + 1;
-        saveas(f, 'local/modeling_chipsat/' + string(counter) + '.jpg');
-    end
+    frame = getframe(gcf);
+    img =  frame2im(frame);
+    [img,cmap] = rgb2ind(img,256);
+    if i == 1
+        imwrite(img,cmap,'local/animation_chipsat.gif','gif','LoopCount',Inf,'DelayTime',0.001);
+    else
+        imwrite(img,cmap,'local/animation_chipsat.gif','gif','WriteMode','append','DelayTime',0.001);
+    end        
+    counter = counter + 1;
+    saveas(f, 'local/modeling_chipsat/' + string(counter) + '.jpg');
 end
 save("local/modeling_report", 'modeling_report')
 
@@ -240,7 +225,7 @@ for i = 1:1000  % Сколько картинок обработать
             counter = counter + 1;
             docking{counter}.id = ids(ii);
             docking{counter}.r = r';
-            docking{counter}.i = round(dt_cam / dt)*i;
+            docking{counter}.i = i;
         end
     catch
         % disp('i='+string(i)+' | Меток не обнаружено!')
@@ -278,7 +263,11 @@ for j=n_deputy:-1:1
     end
     % plot(t,r(1,:) / markerSize(1)); plot(t,r(2,:) / markerSize(1)); plot(t,r(3,:) / markerSize(1));
     if size(r, 2) > 0
-        plot(t,r(1,:)); plot(t,r(2,:)); plot(t,r(3,:));
+        e = norm(r_real);
+        % e = deputy_dims(1);
+        plot(t,r(1,:)/e, 'LineWidth', 2); 
+        plot(t,r(2,:)/e, 'LineWidth', 2); 
+        plot(t,r(3,:)/e, 'LineWidth', 2);
         endpoint = size(t, 2)-10;
         if endpoint > 10
             ts{j} = t(10:endpoint);
@@ -291,7 +280,7 @@ hold off
 % camup([1 0 0])
 % axis equal
 % legend('x', 'y', 'z')
-xlabel('Время, c'); ylabel('Ошибка навигации, м')
+xlabel('Время, c'); ylabel('Ошибка навигации, безразм')
 
 %%
 import graphics.*

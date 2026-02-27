@@ -1,0 +1,14 @@
+function f_a = force_aerodynamic_0345(name,mass,S,v,n,rho_a,aero_reflection_ratio)
+    % На основе статьи Ткачев С.С., Мухачев Б.О. "Методика расчета ...аэродинамического сопротивления ..."
+    ev = v / norm(v);
+    I1 = S * dot(ev,n)  * ev;
+    I2 = S * dot(ev,n)^2 * n;
+    I3 = S * dot(ev,n)   * n;
+    
+    e = 0.1;
+    if name == "PCBsat"
+        f_a = 1/m*rho_a*norm(v)^2 * ((1-e)*I1 + 2*e*I2 + (1-e)*reflection_ratio*I3);  % Aerodynamic full force
+    else
+        f_a = S
+    end
+end

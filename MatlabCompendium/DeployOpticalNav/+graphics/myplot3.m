@@ -4,6 +4,6 @@ arguments (Input)
     r (3,:) {mustBeNumeric}
     color (1,1) string = 'k'
 end
-plot3(r(1,:), r(2,:), r(3,:), color);
+plot3(r(1,:), r(2,:), r(3,:), color,'LineWidth',2);
 
 end

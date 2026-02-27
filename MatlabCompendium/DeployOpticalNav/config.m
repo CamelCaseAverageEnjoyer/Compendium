@@ -46,8 +46,8 @@ M_orf2cam = M_brf2cam * M_orf2brf;
 
 
 % ChipSat deploy params
-v0 = 0.001;   % m/s
-dv = v0/20;  % m/s
+v0 = 0.01;   % m/s
+dv = v0/10;  % m/s
 dr = 0.01;    % m
 M_brf2dep = [0 0 1;
              0 1 0;

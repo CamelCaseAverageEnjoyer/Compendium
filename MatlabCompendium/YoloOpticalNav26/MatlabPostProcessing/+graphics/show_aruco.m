@@ -1,23 +1,20 @@
-function show_aruco(dims, A, r_irf, r_brf, marker)  % (r, r1, q, d)
+function show_aruco(dims, rot, pos, marker)
 
-    marker_clr = [0; 1];
-    nx = size(marker, 1);
-    ny = size(marker, 2);
-    hx = 1 / nx;
-    hy = 1 / ny;
+    n = size(marker, 1);
+    h = 1 / n;
     % disp('Размеры ячейки: ['+ string(hx*dims(1)) + ', ' + string(hy*dims(2)) + '] м')
     
-    x = zeros(4, nx*ny);
-    y = zeros(4, nx*ny);
-    z = zeros(4, nx*ny);
-    c = zeros(1, nx*ny);
+    x = zeros(4, n^2);
+    y = zeros(4, n^2);
+    z = zeros(4, n^2);
+    c = zeros(1, n^2);
     
-    for i = 1:nx
-        for j = 1:ny
-            x(:, ny*(i-1)+j) = [hx*(i-1); hx*i; hx*i; hx*(i-1)];
-            y(:, ny*(i-1)+j) = [hy*(j-1); hy*(j-1); hy*j; hy*j];
-            z(:, ny*(i-1)+j) = [0; 0; 0; 0];
-            c(ny*(i-1)+j) = marker(ny-j+1,i);                                % ШАМАНИЗМ
+    for i = 1:n
+        for j = 1:n
+            x(:, n*(i-1)+j) = [h*(i-1); h*i; h*i; h*(i-1)];
+            y(:, n*(i-1)+j) = [h*(j-1); h*(j-1); h*j; h*j];
+            z(:, n*(i-1)+j) = [0; 0; 0; 0];
+            c(n*(i-1)+j) = marker(n-j+1,i); % ШАМАНИЗМ
         end
     end
     x = x - 0.5;
@@ -28,10 +25,9 @@ function show_aruco(dims, A, r_irf, r_brf, marker)  % (r, r1, q, d)
     y = reshape(y, 1, []);
     z = reshape(z, 1, []);
     for i = 1:length(x)
-        r = [x(i) .* dims(1); y(i) .* dims(2); z(i)];  % stretching
-        r = r + r_brf;  % translation
-        r = A * r;  % rotation
-        r = r + r_irf;  % translation
+        r = [x(i); y(i); z(i)] * dims;  % stretching
+        r = rot * r;  % rotation
+        r = r + pos;  % translation
         x(i) = r(1);
         y(i) = r(2);
         z(i) = r(3);

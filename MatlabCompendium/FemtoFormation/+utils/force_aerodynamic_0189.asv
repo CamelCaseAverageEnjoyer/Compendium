@@ -1,0 +1,23 @@
+function [f_ad,f_al] = force_aerodynamic_0189(name,mass,S,v,n,rho_a,o)
+    %FORCE_AERODYNAMIC_0189 based on paper Archison J.A., Peck M.A.
+    %  "Length Scaling in Spacecraft Dynamics"
+    import utils.unitVec
+    if norm(cross(n,v)) < 1e-10
+        e_lift = n;
+    else
+        e_lift = unitVec(cross(v,cross(n,v)));
+    end
+    
+    if name == "PCBsat"
+        a = acos(dot(v, n) / norm(v) / norm(n));   % attack angle
+        k_ad = 2*(o.aero.n_tangentialaccomo + o.aero_n_normalaccomo*o.aero.reflection_ratio*cos(a) + (2 - o.aero.n_normalaccomo - o.aero.n_tangentialaccomo)*cos(a)^2)*cos(a);
+        k_al = (o.aero_n_normalaccomo*o.aero.reflection_ratio + (2 - o.aero.n_normalaccomo - o.aero.n_tangentialaccomo)*cos(a))*sin(2*a);    
+    else
+        k_ad = 2.2;
+        k_al = 0;
+    end
+    
+    
+    f_ad = 1/2/mass*k_ad*S*rho_a*norm(v) * v;  % Aerodynamic drag
+    f_al = 1/2/mass*k_al*S*rho_a*norm(v)^2 * e_lift;  % Aerodynamic lift
+end

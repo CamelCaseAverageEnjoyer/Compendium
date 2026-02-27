@@ -25,16 +25,16 @@ dx = 0.05;
 d = dx/2;  % Semi-width of deputy spacecraft
 D = 0.12;  % Distance between deputy spacecrafts
 dims = [dx; 2; 2];
-v_x = 0.1;
+v_x = 0.05;
 x0_ = 0.5;
-all_counter = 20;  % 51;
-dt = 0.2;
+all_counter = 151;
+dt = 0.02;
 
 R_real = zeros(3,all_counter);
 L_real = zeros(3,all_counter);
 h_real = zeros(3,all_counter);
 counter = 0;
-for t=0:dt:10
+for t=0:dt:3
     counter = counter + 1;
     r_orf = [x0_+v_x*t; 0; 0];
     R_real(:,counter) = r_orf + [0; dims(2)/2; dims(2)/2];
@@ -51,7 +51,7 @@ f = figure('Color', [0 0 0], 'Position', [1920 0 window_size]);
 counter = 0;
 dv = v_x/20 * (rand(3,100)*2 - 1);
 % dv = zeros(3,100);
-for t=0:0.2:10
+for t=0:dt:3
     clf
     set(gca,'Color','white');
     colormap('gray');
@@ -189,10 +189,10 @@ for c =1:counter
         counter_x = 0; 
         L = 2; xy = sqrt((x1-x2)^2+(y1-y2)^2); f=(fx+fy)/2;
         Z = f*L/xy; X = x1*L/xy; Y = y1*L/xy;
-        for Lx= 0:0.01:2
+        for Lx= 0:0.001:2
             counter_x  = counter_x + 1;
             counter_y  = 0;
-            for Ly= 0:0.01:2
+            for Ly= 0:0.001:2
                 counter_y  = counter_y + 1;
                 if Lx^2+Ly^2<=L^2
                     current_error = abs(x2*(Z + sqrt(L^2-Lx^2-Ly^2))-f*(X+Lx))^2 + ...
@@ -241,9 +241,9 @@ t = 0:dt:(dt*(correct_frames-1));
 figure('Position', [850 650 new_window_size]); hold on
 e = norm(L_real(:,1));
 r1 = L_sep(:,1:correct_frames,1); r2 = L_real(:,1:correct_frames);
-plot(t,(r1(1,:)-r2(1,:))/e, 'r-'); 
-plot(t,(r1(2,:)-r2(2,:))/e, 'g-'); 
-plot(t,(r1(3,:)-r2(3,:))/e, 'b-');
+plot(t,(r1(1,:)-r2(1,:))/e, 'r-','LineWidth',3); 
+plot(t,(r1(2,:)-r2(2,:))/e, 'g-','LineWidth',3); 
+plot(t,(r1(3,:)-r2(3,:))/e, 'b-','LineWidth',3);
 xlabel('Время, с'); ylabel('Координаты L, безразм.')
 legend('ошибка Lˣ', 'ошибка Lʸ', 'ошибка Lᶻ')
 grid; hold off
@@ -251,9 +251,9 @@ grid; hold off
 figure('Position', [250 150 new_window_size]); hold on
 e = norm(R_real(:,1));
 r1 = R_sep(:,1:correct_frames,1); r2 = R_real(:,1:correct_frames);
-plot(t,(r1(1,:)-r2(1,:))/e, 'r-'); 
-plot(t,(r1(2,:)-r2(2,:))/e, 'g-'); 
-plot(t,(r1(3,:)-r2(3,:))/e, 'b-');
+plot(t,(r1(1,:)-r2(1,:))/e, 'r-','LineWidth',3); 
+plot(t,(r1(2,:)-r2(2,:))/e, 'g-','LineWidth',3); 
+plot(t,(r1(3,:)-r2(3,:))/e, 'b-','LineWidth',3);
 xlabel('Время, с'); ylabel('Координаты R, безразм.')
 legend('ошибка Rˣ', 'ошибка Rʸ', 'ошибка Rᶻ')
 grid; hold off
@@ -269,7 +269,7 @@ for i=1:size(Ls,2)
     a = [a norm(Ls(:,i))];
     b = [b 2];
 end
-plot(t,a); plot(t,b)
+plot(t,a,'LineWidth',3); plot(t,b,'LineWidth',3)
 xlabel('Время, с'); ylabel('Длина линии |L|, м')
 legend('оцениваемая', 'истинная')
 grid; hold off
@@ -284,7 +284,9 @@ for i=1:size(Ls,2)
 end
 L_est = [x; y; z];
 e = norm(L_real(:,1));
-plot(t,(x-L_real(1,:))/e, 'r-'); plot(t,(y-L_real(2,:))/e, 'g-'); plot(t,(z-L_real(3,:))/e, 'b-');
+plot(t,(x-L_real(1,:))/e, 'r-','LineWidth',3); 
+plot(t,(y-L_real(2,:))/e, 'g-','LineWidth',3);
+plot(t,(z-L_real(3,:))/e, 'b-','LineWidth',3);
 xlabel('Время, с'); ylabel('Координаты L, безразм.')
 legend('ошибка Lˣ', 'ошибка Lʸ', 'ошибка Lᶻ')
 grid; hold off
@@ -299,7 +301,9 @@ for i=1:size(Rs,2)
 end
 R_est = [x; y; z];
 e = norm(R_real(:,1));
-plot(t,(x-R_real(1,:))/e, 'r-'); plot(t,(y-R_real(2,:))/e, 'g-'); plot(t,(z-R_real(3,:))/e, 'b-'); 
+plot(t,(x-R_real(1,:))/e, 'r-','LineWidth',3); 
+plot(t,(y-R_real(2,:))/e, 'g-','LineWidth',3); 
+plot(t,(z-R_real(3,:))/e, 'b-','LineWidth',3); 
 xlabel('Время, с'); ylabel('Координаты R₁, безразм.')
 legend('ошибка X₁', 'ошибка Y₁', 'ошибка Z₁')
 grid; hold off
@@ -312,7 +316,9 @@ for i=1:size(hs,2)
     y(i) = tmp(2);
     z(i) = tmp(3);
 end
-plot(t,x, 'r-');           plot(t,y, 'g-');           plot(t,z, 'b-');
+plot(t,x, 'r-','LineWidth',3);           
+plot(t,y, 'g-','LineWidth',3);           
+plot(t,z, 'b-','LineWidth',3);
 xlabel('Время, с'); ylabel('Координаты h в СК камеры, м')
 legend('оценка hˣ', 'оценка hʸ', 'оценка hᶻ')
 grid; hold off
@@ -326,14 +332,16 @@ for i=1:size(hs,2)
     z(i) = tmp(3);
 end
 h_est = [x; y; z];
-plot(x-h_real(1,:), 'r-'); plot(y-h_real(2,:), 'g-'); plot(z-h_real(3,:), 'b-'); 
+plot(x-h_real(1,:), 'r-','LineWidth',3); 
+plot(y-h_real(2,:), 'g-','LineWidth',3); 
+plot(z-h_real(3,:), 'b-','LineWidth',3); 
 xlabel('Время, с'); ylabel('Координаты h, безразм.')
 legend('ошибка hˣ', 'ошибка hʸ', 'ошибка hᶻ')
 grid; hold off
 
 %% Рассчёт оценки орбиты
 
-correct_frames = 14;
+correct_frames = 150;
 
 ft = fittype('a*x + b');
 x = 1:correct_frames;
@@ -348,8 +356,12 @@ L_mnk = [mean(L_est(1,1:correct_frames)); mean(L_est(2,1:correct_frames)); mean(
 h_mnk = [mean(h_est(1,1:correct_frames)); mean(h_est(2,1:correct_frames)); mean(h_est(3,1:correct_frames))];
 
 figure('Position', [100 600 new_window_size]); hold on
-plot(R_real(1,1:correct_frames), 'r:'); plot(R_real(2,1:correct_frames), 'g:'); plot(R_real(3,1:correct_frames), 'b:'); 
-plot(R_mnk(1,1:correct_frames), 'r-');  plot(R_mnk(2,1:correct_frames), 'g-');  plot(R_mnk(3,1:correct_frames), 'b-'); 
+plot(R_real(1,1:correct_frames), 'r:','LineWidth',3); 
+plot(R_real(2,1:correct_frames), 'g:','LineWidth',3); 
+plot(R_real(3,1:correct_frames), 'b:','LineWidth',3); 
+plot(R_mnk(1,1:correct_frames), 'r-','LineWidth',3);  
+plot(R_mnk(2,1:correct_frames), 'g-','LineWidth',3);  
+plot(R_mnk(3,1:correct_frames), 'b-','LineWidth',3); 
 xlabel('Кадры'); ylabel('Координаты R, м')
 legend('Rˣ', 'Rʸ', 'Rᶻ', 'оценка Rˣ', 'оценка Rʸ', 'оценка Rᶻ')
 grid; hold off
@@ -361,8 +373,12 @@ for i=1:correct_frames
     R_center_est(:,i)  = R_mnk(:,i)  - L_mnk/2       - cross(L_mnk,      h_mnk)/2;
 end
 figure('Position', [400 600 new_window_size]); hold on
-plot(R_center_real(1,:), 'r:'); plot(R_center_real(2,:), 'g:'); plot(R_center_real(3,:), 'b:'); 
-plot(R_center_est(1,:), 'r-');  plot(R_center_est(2,:), 'g-');  plot(R_center_est(3,:), 'b-'); 
+plot(R_center_real(1,:), 'r:','LineWidth',3); 
+plot(R_center_real(2,:), 'g:','LineWidth',3); 
+plot(R_center_real(3,:), 'b:','LineWidth',3); 
+plot(R_center_est(1,:), 'r-','LineWidth',3);  
+plot(R_center_est(2,:), 'g-','LineWidth',3);  
+plot(R_center_est(3,:), 'b-','LineWidth',3); 
 xlabel('Кадры'); ylabel('Координаты центра масс ДКА, м')
 legend('x', 'y', 'z', 'оценка x', 'оценка y', 'оценка z')
 grid; hold off
