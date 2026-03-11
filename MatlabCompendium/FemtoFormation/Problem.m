@@ -69,6 +69,8 @@ classdef Problem
         deploy_model    % Вариант отделения PCBsat (random / linear)
 
         % Постоянно изменяющиеся параметры
+        r_orb
+        v_orb
         S_orb2dec
         S_orf2irf
         S_irf2grf
@@ -76,6 +78,7 @@ classdef Problem
         rho_atm
         e_sun
         is_illuminated
+        is_illuminated_list = [];
         v_atm
     end
 
@@ -93,7 +96,7 @@ classdef Problem
             switch body
                case "Earth"
                   o.a_body = 6378136;                   % ПЗ-90
-                  o.f_body = 298.257839303;             % ПЗ-90
+                  o.f_body = 1/298.257839303;           % ПЗ-90
                   o.J2 = -484164.953e-9;                % ПЗ-90
                   o.w_body = 7292115e-11;               % ПЗ-90  
                   o.mu = 398600.44e9;                   % ПЗ-90
@@ -152,16 +155,18 @@ classdef Problem
             o.S_orf2irf = rot_orf2irf(o.S_orb2dec);
             o.S_irf2grf = rot_irf2grf(o.w_body, 0, o.t);
             [r_irf, v_irf] = orb2dec(o.mu,Om,u,i,v,e,p);
+            o.r_orb = norm(r_irf); 
+            o.v_orb = norm(v_irf);
             o.H = height(o.a_body,o.f_body,r_irf);
-            o.rho_atm = density_aero_0007(o.H, "Earth");
-            o.v_atm = cross(normalize(r_irf), [0;0;1]) * o.v_body;
+            o.rho_atm = density_aero_0007(o.H, body);
+            o.v_atm = cross(unitVec(r_irf), [0;0;1]) * o.v_body;
             o.e_sun = [0;1;0];  % const in IRF
             o.is_illuminated = or(dot(r_irf,o.e_sun)>0, norm(r_irf-dot(r_irf,o.e_sun)*o.e_sun)>o.a_body);
             
             o.sat.("CubeSat")(1).r_irf(:,1) = r_irf;
             o.sat.("CubeSat")(1).v_irf(:,1) = v_irf;
             o.sat.("CubeSat")(1).w(:,1) = zeros(3,1);
-            o.sat.("CubeSat")(1).q(:,1) = normalize(rand(4,1));
+            o.sat.("CubeSat")(1).q(:,1) = unitVec(rand(4,1));
             % Задание движение остальных МКА
             if satamount(1) > 1
                 error("Код ещё не написан для нескольких МКА!")
@@ -170,23 +175,30 @@ classdef Problem
             for k=1:satamount(2)
                 r_irf = o.sat.("CubeSat")(1).r_irf(:,1);
                 v_irf = o.sat.("CubeSat")(1).v_irf(:,1);
+                n = sqrt(o.mu/norm(r_irf)^3);
                 switch deploy_model
                     case "random"
-                        r_irf = r_irf + 100 * (2*rand(3,1)-1);
-                        v_irf = v_irf +   1 * (2*rand(3,1)-1);
+                        r = r_irf + 100 * (2*rand(3,1)-1);
+                        v = v_irf +   1 * (2*rand(3,1)-1);
+                    case "random bound"
+                        [r_orf,v_orf] = irf2orf(r_irf,v_irf,o.S_orf2irf',o.r_orb,o.v_orb);
+                        r_orf = r_orf + 100 * (2*rand(3,1)-1);
+                        v_orf = v_orf +   1 * (2*rand(3,1)-1);
+                        v_orf(1) = -2*n*r_orf(2);
+                        [r,v] = orf2irf(r_orf,v_orf,o.S_orf2irf,o.r_orb,o.v_orb);
                     case "linear"
                         s = unitVec(v_irf);
                         dr = o.PCBsat_thikness * 3;
                         dv = 0.01;
-                        r_irf = r_irf + s * dr * (k+1);
-                        v_irf = v_irf + s * dv * (k+1);
+                        r = r_irf + s * dr * (k+1);
+                        v = v_irf + s * dv * (k+1);
                     otherwise
                         error("Некорректно задан вариант отделения")
                 end
-                o.sat.("PCBsat")(k).r_irf(:,1) = r_irf;
-                o.sat.("PCBsat")(k).v_irf(:,1) = v_irf;
+                o.sat.("PCBsat")(k).r_irf(:,1) = r;
+                o.sat.("PCBsat")(k).v_irf(:,1) = v;
                 o.sat.("PCBsat")(k).w(:,1) = zeros(3,1);
-                o.sat.("PCBsat")(k).q(:,1) = normalize(rand(4,1));
+                o.sat.("PCBsat")(k).q(:,1) = unitVec(rand(4,1));
             end
         end
 
@@ -218,7 +230,7 @@ classdef Problem
             
                         r = x(1:3) + dx(1:3);
                         v = x(4:6) + dx(4:6);
-                        q = normalize(x(7:10) + dx(7:10)); q = q*q(1);
+                        q = unitVec(x(7:10) + dx(7:10)); q = q*q(1);
                         w = x(11:13) + dx(11:13);   
     
                         o.sat.(o.satnames(j))(k).r_irf(:,i+1) = r; 
@@ -230,7 +242,7 @@ classdef Problem
                 % Обновление орбитальных параметров по [r,v,w,q]
                 % НЕ обновляются истинная аномалия, аргумент широты [v,u]
                 l = o.iter + 1;
-                [e,i,om,Om,~,a] = dec2orb(o.sat.CubeSat(1).r_irf(:,l),o.sat.CubeSat(1).v_irf(:,l),o.mu);
+                [e,~,~,~,~,a] = dec2orb(o.sat.CubeSat(1).r_irf(:,l),o.sat.CubeSat(1).v_irf(:,l),o.mu);
                 M = sqrt(o.mu/a^3)*(o.t - 0);
                 E = 0;
                 for k=1:10
@@ -241,15 +253,20 @@ classdef Problem
                 else
                     nu = pi - 2*atan(sqrt((1+e)/(1-e))*tan(E/2));
                 end
-                o.S_orb2dec = rot_orb2dec(Om,om + nu,i);
-                o.S_orf2irf = rot_orf2irf(o.S_orb2dec);
+                % o.S_orb2dec = rot_orb2dec(Om,om + nu,i);
+                % o.S_orf2irf = rot_orf2irf(o.S_orb2dec);
                 o.S_irf2grf = rot_irf2grf(o.w_body, 0, o.t);
                 for j=1:2  % [CubeSat, PCBsat]
                     for k=1:o.satamount(j)
                         r = o.sat.(o.satnames(j))(k).r_irf(:,l);
                         v = o.sat.(o.satnames(j))(k).v_irf(:,l);
+                        if (j==1) && (k==1)
+                            o.S_orf2irf = rot_orf2irf2(r,v);
+                            o.r_orb = norm(r); 
+                            o.v_orb = norm(v);
+                        end
                         [e,i,om,Om,p,a] = dec2orb(r,v,o.mu);
-                        [r_orf,v_orf] = irf2orf(r,v,o.S_orf2irf');
+                        [r_orf,v_orf] = irf2orf(r,v,o.S_orf2irf',o.r_orb,o.v_orb);
                         [r_grf,v_grf] = irf2grf(r,v,o.S_irf2grf,o.w_body);
                         [h, c, f] =  motion_integrals(r,v,o.mu);
                         
@@ -273,14 +290,15 @@ classdef Problem
                     end
                 end
                 r = o.sat.("CubeSat")(1).r_irf(:,l);
-                i = o.sat.("CubeSat")(1).i(l);
-                u = o.sat.("CubeSat")(1).u(l);
-                Om = o.sat.("CubeSat")(1).om(l);
+                %i = o.sat.("CubeSat")(1).i(l);
+                %u = o.sat.("CubeSat")(1).u(l);
+                %Om = o.sat.("CubeSat")(1).om(l);
                 o.H = height(o.a_body,o.f_body,r);
                 o.rho_atm = density_aero_0007(o.H, "Earth");
-                o.v_atm = cross(normalize(r), [0;0;1]) * o.v_body;
+                o.v_atm = cross(unitVec(r), [0;0;1]) * o.v_body;
                 o.e_sun = [0;1;0];  % const in IRF
                 o.is_illuminated = or(dot(r,o.e_sun)>0, norm(r-dot(r,o.e_sun)*o.e_sun)>o.a_body);
+                o.is_illuminated_list(o.iter) = o.is_illuminated;
                 
                 % Измерения
 
@@ -297,19 +315,29 @@ classdef Problem
             w = x(11:13);
 
             n = quat2dcm(q')' * [0;0;1];
+            % Костыль - пример дибильного управления
+            if co.name == "PCBsat"
+                if dot(o.e_sun,v) < 0
+                    n = -o.e_sun;
+                else
+                    n = unitVec(cross([0;0;1],o.e_sun)-o.e_sun);
+                end
+            end
+            %
             % S_irf2grf_ = rot_irf2grf(o.w_body, 0, t);
             a = ... % force_gravity_full(r, S_irf2grf_) + ...
                 force_gravity_central(r, o.mu) + ...
                 force_aerodynamic_0345(co.name,co.mass,co.S,o.v_atm - v,n,o.rho_atm,o.aero_reflection_ratio) + ...
-                force_solarradiation(co.name,co.S,o.e_sun,n,o.solarradio_pressure,o.solarradio_n_specularly,o.solarradio_n_diffuse,o.solarradio_n_absorbed,o.is_illuminated);
+                force_solarradiation(co.name,co.S,o.e_sun,n,o.solarradio_pressure,o.solarradio_n_specularly,o.solarradio_n_diffuse,o.solarradio_n_absorbed,o.is_illuminated) + ...
+                zeros(3,1);
             M = torque_gravity(o.mu,quat2dcm(q'),r,co.I);
 
             dr = v;
             dv = a;
-            dq = 1/2 * quatmultiply(q', [0,w']);
+            dq = 1/2 * quatmultiply(q', [0,w'])';
             dw = co.I \ (M - cross(w, co.I * w));
 
-            dx = [dr; dv; dq'; dw];
+            dx = [dr; dv; dq; dw];
         end
 
         %% Измерения
@@ -329,28 +357,89 @@ classdef Problem
         end   
 
         %% Отображение
-        function plot_3(o)
-            figure("Position",[100 500 500 400]);
+        function plot_3(p)
+            import utils.*
+
+            figure("Position",[50 600 400 400]);
             hold on
+            [x,y,z] = sphere(30);
+            warp(-x*p.a_body,y*p.a_body,-z*b_body(p.a_body,p.f_body),imread('local/earth.jpg'));
             for j=1:2  % [CubeSat, PCBsat]
-                for k=1:o.satamount(j)
-                    s = o.sat.(o.satnames(j))(k);
+                for k=1:p.satamount(j)
+                    s = p.sat.(p.satnames(j))(k);
                     plot3(s.r_irf(1,:),s.r_irf(2,:),s.r_irf(3,:),'LineWidth',1)                    
                 end
             end
             hold off
+            axis equal
             title("Траектории в ИСК")
 
-            figure("Position",[600 500 500 400]);
+            figure("Position",[450 600 400 400]);
+            hold on
+            [x,y,z] = sphere(30);
+            warp(-x*p.a_body,y*p.a_body,-z*b_body(p.a_body,p.f_body),imread('local/earth.jpg'));
+            for j=1:2  % [CubeSat, PCBsat]
+                for k=1:p.satamount(j)
+                    s = p.sat.(p.satnames(j))(k);
+                    plot3(s.r_grf(1,:),s.r_grf(2,:),s.r_grf(3,:),'LineWidth',1)                    
+                end
+            end
+            hold off
+            axis equal
+            title("Траектории в ГСК")
+
+            figure("Position",[850 600 500 400]);
             hold on
             for j=1:2  % [CubeSat, PCBsat]
-                for k=1:o.satamount(j)
-                    s = o.sat.(o.satnames(j))(k);
+                for k=1:p.satamount(j)
+                    s = p.sat.(p.satnames(j))(k);
                     plot3(s.r_orf(1,:),s.r_orf(2,:),s.r_orf(3,:),'LineWidth',1)                    
                 end
             end
             hold off
+            xlabel("x, м"); ylabel("y, м"); zlabel("z, м");
             title("Траектории в ОСК")
+
+            figure("Position",[1250 600 500 400]);
+            hold on
+            for j=1:2  % [CubeSat, PCBsat]
+                for k=1:p.satamount(j)
+                    s = p.sat.(p.satnames(j))(k);
+                    plot(s.r_orf(1,:),'r')
+                    plot(s.r_orf(2,:),'g')
+                    plot(s.r_orf(3,:),'b')
+                end
+            end
+            hold off
+            legend({"x","y","z"})
+            title("Траектории в ОСК")
+
+
+            figure("Position",[50 150 400 400]);
+            plot(p.is_illuminated_list,'k')
+            title("Освещённость роя"); ylim([-0.5 1.5])
+
+            figure("Position",[450 150 400 400]);
+            hold on
+            j = 2;  % [PCBsat]
+            for k=1:p.satamount(j)
+                s = p.sat.(p.satnames(j))(k);
+                plot(s.h - s.h(2),'k')  % h(1) = NaN
+            end
+            hold off
+            title("h (отн."+string(s.h(2))+")")
+
+            figure("Position",[850 150 400 400]);
+            hold on
+            j = 2;  % [PCBsat]
+            for k=1:p.satamount(j)
+                s = p.sat.(p.satnames(j))(k);
+                plot(s.c(1,:) - s.c(1,2),'r')
+                plot(s.c(2,:) - s.c(2,2),'g')
+                plot(s.c(3,:) - s.c(3,2),'b')
+            end
+            hold off
+            title("c (отн. "+string(norm(s.c(:,2)))+")")
         end
     end
 end

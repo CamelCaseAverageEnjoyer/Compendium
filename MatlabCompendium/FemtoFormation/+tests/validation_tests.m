@@ -19,12 +19,12 @@ a = F / cfg.PCBsat.mass;
 disp(a);
 
 %% Atmospheric models compare 
-import core.dynamics.density_aero_0007
+import utils.density_aero_0007
 
-h = 300e3:20e3:500e3;
+h = 300e3:20e3:800e3;
 rho = zeros(1,length(h));
 for i=1:length(h)
-    rho(i) = density_aero_0007(h(i));
+    rho(i) = density_aero_0007(h(i), "Earth");
 end
 figure('Position', [650 500 600 500]); hold on; 
 title("Модели плотности атмфосферы");

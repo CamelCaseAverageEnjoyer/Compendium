@@ -1,0 +1,6 @@
+clear; clc; close all;
+myfolder = "local/camcal/cam1_calibrate_checkboard_changed/";
+listing = dir(myfolder);
+for i = 1:size(listing)
+    disp(myfolder+string())
+end

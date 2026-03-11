@@ -15,13 +15,16 @@ function rho_a = density_aero_0007(h_orb, planet)
         n_01 = 4.25; 
         n_02 = 4.37;
         
-        if h_orb > 290e3
-            n_ = n_0 + K_0 * ((h_orb-H_0)/a_1)^n_01 - ((h_orb-H_0)/a_2)^n_02;
-        else
+        if h_orb < 290e3
             n_ = n_0 + K_0 * ((H_0-h_orb)/a_1)^n_01;
+            rho_a = A * (H_m/h_orb)^n_; 
+        elseif h_orb < 600e3
+            n_ = n_0 + K_0 * ((h_orb-H_0)/a_1)^n_01 - ((h_orb-H_0)/a_2)^n_02;
+            rho_a = A * (H_m/h_orb)^n_; 
+        else
+            rho_a = 0;
         end
         
-        rho_a = A * (H_m/h_orb)^n_;  % Atmospheric density
     else
         rho_a = 0;
     end

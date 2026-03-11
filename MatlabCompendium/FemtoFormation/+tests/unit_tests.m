@@ -1,5 +1,15 @@
 close all; clc; clear; import utils.*
 
+%% Geoid test
+p = Problem(1,"Earth",[1, 2],['',''],'random',0,0,0,0,0);  
+a = p.a_body; f = p.f_body;
+for i =1:100
+    h = height(a,f,unitVec(rand(3,1)*2-1)*(a + 1000e3));
+    assert((1000e3 < h) && (h < 1100e3))
+    rho_atm = density_aero_0007(h, "Earth");
+    disp(rho_atm)
+end
+
 %% Params init
 tic
 % Zero-params
